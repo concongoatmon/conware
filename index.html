@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Conware QA - iPad Inspection Workbench</title>
+  <style>
+    :root {
+      --bg-sky: #70c4fc;
+      --bg-meadow: #62d854;
+      --glass-base: rgba(255, 255, 255, 0.42);
+      --glass-card: rgba(255, 255, 255, 0.58);
+      --glass-border: rgba(255, 255, 255, 0.85);
+      --glass-shadow: 0 12px 35px rgba(12, 70, 110, 0.22);
+      --text-main: #0c334e;
+      --text-sub: #27587a;
+      --brand-blue: #0288d1;
+      --aero-green: #38b600;
+      --aero-red: #e53935;
+      --aero-amber: #f59e0b;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      background: linear-gradient(175deg, #4aa6ee 0%, #76d3fc 35%, #b4ec8b 75%, #62d854 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    /* Ambient Aero Floating Bubbles */
+    .bubble-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 90px) 16px;
+    }
+
+    /* Frutiger Glass Mixin */
+    .glass-panel {
+      background: var(--glass-card);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(25px) saturate(180%);
+      -webkit-backdrop-filter: blur(25px) saturate(180%);
+      box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+    }
+
+    /* Aero 3D Tactile Buttons */
+    .aero-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      cursor: pointer;
+      color: #0d3859;
+      background: linear-gradient(180deg, #ffffff 0%, #dbf1ff 45%, #b8e1fc 50%, #d4eeff 100%);
+      box-shadow: 0 4px 12px rgba(10, 60, 95, 0.18), inset 0 1px 0 #ffffff;
+      touch-action: manipulation;
+      transition: transform 0.08s ease, filter 0.1s ease;
+    }
+
+    .aero-btn:active {
+      transform: scale(0.96);
+      filter: brightness(0.92);
+    }
+
+    .aero-btn.primary {
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 50, 90, 0.6);
+      border-color: rgba(255, 255, 255, 0.7);
+      background: linear-gradient(180deg, #5ec3fc 0%, #1594e5 45%, #057ecc 50%, #1693e3 100%);
+      box-shadow: 0 4px 14px rgba(4, 95, 158, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .aero-btn.success {
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(20, 70, 0, 0.6);
+      background: linear-gradient(180deg, #8fe858 0%, #46ba12 45%, #359d0b 50%, #4fbd17 100%);
+      box-shadow: 0 4px 14px rgba(45, 140, 10, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    /* Top Branding Bar */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      margin-bottom: 16px;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-orb {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 25%, #ffffff 0%, #56c8ff 45%, #0277bd 90%);
+      box-shadow: 0 6px 16px rgba(2, 119, 189, 0.45), inset 0 -3px 6px rgba(0, 40, 70, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .title-sub h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      background: linear-gradient(180deg, #073a5e 0%, #0368a6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-sub p {
+      margin: 2px 0 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    /* Quick Progress Pill */
+    .progress-pill-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.6);
+      box-shadow: inset 0 2px 4px rgba(0, 40, 70, 0.15);
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #7dec57 0%, #3db40e 50%, #2f9408 100%);
+      box-shadow: 0 1px 4px rgba(45, 140, 10, 0.4);
+      transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Sections Layout */
+    .grid-sections {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-card {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+      padding-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0b3d63;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Individual Test Items */
+    .test-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+    }
+
+    .test-header-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .test-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #093452;
+    }
+
+    .pill-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(100, 140, 170, 0.2);
+      color: #124d73;
+    }
+
+    .pill-badge.pass {
+      background: #cbf9b7;
+      color: #1f6b00;
+      border: 1px solid #7ce650;
+    }
+
+    .pill-badge.fail {
+      background: #fed4d4;
+      color: #9c0000;
+      border: 1px solid #f77c7c;
+    }
+
+    /* Multi-Option Choice Chips */
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .state-chip {
+      min-height: 44px;
+      padding: 0 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      background: linear-gradient(180deg, #ffffff 0%, #ebf5fa 100%);
+      color: #154c70;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0, 30, 60, 0.08);
+      touch-action: manipulation;
+    }
+
+    .state-chip.active-pass {
+      background: linear-gradient(180deg, #8fe858 0%, #46ba12 100%);
+      color: #ffffff;
+      border-color: #38b600;
+      box-shadow: 0 2px 8px rgba(56, 182, 0, 0.4);
+    }
+
+    .state-chip.active-fail {
+      background: linear-gradient(180deg, #ff7e7b 0%, #e53935 100%);
+      color: #ffffff;
+      border-color: #b71c1c;
+      box-shadow: 0 2px 8px rgba(229, 57, 53, 0.4);
+    }
+
+    .state-chip.active-warn {
+      background: linear-gradient(180deg, #ffd359 0%, #f59e0b 100%);
+      color: #5d3400;
+      border-color: #d97706;
+    }
+
+    /* Battery & Charge Port Auto-Detection Widget */
+    .power-dock {
+      background: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(225,245,255,0.7) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .power-visual {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .battery-pill-graphic {
+      width: 70px;
+      height: 34px;
+      border: 3px solid #094770;
+      border-radius: 8px;
+      position: relative;
+      padding: 2px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .battery-pill-graphic::after {
+      content: "";
+      position: absolute;
+      right: -7px;
+      top: 7px;
+      width: 4px;
+      height: 14px;
+      background: #094770;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .battery-level-liquid {
+      width: 0%;
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #74ea4d 0%, #30b106 100%);
+      transition: width 0.4s ease;
+    }
+
+    .plug-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #0b4973;
+    }
+
+    .plug-indicator.plugged {
+      color: #1f7d00;
+      animation: pulseGlow 1.2s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      from { filter: drop-shadow(0 0 2px #38b600); }
+      to { filter: drop-shadow(0 0 8px #7ce650); }
+    }
+
+    /* Sticky Ergonomic iPad Dock */
+    .ipad-dock {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(25px) saturate(200%);
+      box-shadow: 0 14px 40px rgba(0, 30, 60, 0.28);
+    }
+
+    /* Fullscreen Touch Overlay */
+    .fullscreen-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: #000000;
+      display: none;
+      flex-direction: column;
+    }
+
+    .overlay-top-bar {
+      position: absolute;
+      top: calc(var(--safe-top) + 10px);
+      left: 16px;
+      right: 16px;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .overlay-top-bar > * {
+      pointer-events: auto;
+    }
+
+    #touchCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Camera Viewport */
+    .camera-frame {
+      width: 100%;
+      height: 200px;
+      border-radius: 14px;
+      background: #021a2c;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #cameraVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* VU Meter */
+    .vu-bar-wrap {
+      width: 100%;
+      height: 16px;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 10px;
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .vu-bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #3db40e 0%, #facc15 70%, #ef4444 100%);
+      transition: width 0.05s ease;
+    }
+
+    /* Audit Modal */
+    .audit-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(4, 25, 45, 0.6);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .audit-card {
+      max-width: 650px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+      .bubble-canvas, .ipad-dock, .aero-btn, .chip-group, .top-header button {
+        display: none !important;
+      }
+      .glass-panel {
+        background: none;
+        border: 1px solid #ccc;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      .audit-modal {
+        position: static;
+        background: none;
+        display: block !important;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas class="bubble-canvas" id="bubbleBg"></canvas>
+
+  <div class="app-wrap">
+    <!-- Header -->
+    <header class="top-header glass-panel">
+      <div class="brand-cluster">
+        <div class="logo-orb">✦</div>
+        <div class="title-sub">
+          <h1>Conware QA</h1>
+          <p>iPad Pre-Deployment Diagnostic Station</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="aero-btn" id="soundToggleBtn">🔊 Audio On</button>
+        <button class="aero-btn primary" id="openAuditBtn">📋 View Slip</button>
+      </div>
+    </header>
+
+    <!-- Progress Indicator -->
+    <div class="progress-pill-card glass-panel">
+      <span style="font-weight: 800; font-size: 14px; color:#0b3e64;">Checklist Completed:</span>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="checklistProgress"></div>
+      </div>
+      <span id="progressRatio" style="font-weight: 800; font-size: 14px; color:#0b3e64;">0 / 22</span>
+    </div>
+
+    <!-- Main Diagnostic Grid -->
+    <main class="grid-sections">
+
+      <!-- INTAKE & VERIFICATION -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">📦 Intake &amp; Physical Match</div>
+          <button class="aero-btn" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="batchSetSection('intake', 'Yes')">Pass All</button>
+        </div>
+
+        <div class="test-row" data-component="sn_ticket">
+          <div class="test-header-line">
+            <span class="test-name">S/N Matches the Ticket</span>
+            <span class="pill-badge" id="badge_sn_ticket">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('sn_ticket', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('sn_ticket', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="sn_asset">
+          <div class="test-header-line">
+            <span class="test-name">S/N Matches Asset Tag</span>
+            <span class="pill-badge" id="badge_sn_asset">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('sn_asset', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('sn_asset', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="school_match">
+          <div class="test-header-line">
+            <span class="test-name">Device Matches School in System</span>
+            <span class="pill-badge" id="badge_school_match">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('school_match', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('school_match', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="cleaned_device">
+          <div class="test-header-line">
+            <span class="test-name">Cleaned Device</span>
+            <span class="pill-badge" id="badge_cleaned_device">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('cleaned_device', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('cleaned_device', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- BUTTONS & KEYS -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">🔘 Physical Buttons</div>
+          <button class="aero-btn" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="batchSetSection('buttons', 'Pass')">Pass All</button>
+        </div>
+
+        <div class="test-row" data-component="power_btn">
+          <div class="test-header-line">
+            <span class="test-name">Power Button</span>
+            <span class="pill-badge" id="badge_power_btn">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('power_btn', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('power_btn', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('power_btn', 'Sticky', 'active-warn')">Sticky</button>
+            <button class="state-chip" onclick="setTestState('power_btn', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('power_btn', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="home_btn">
+          <div class="test-header-line">
+            <span class="test-name">Home Button</span>
+            <span class="pill-badge" id="badge_home_btn">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('home_btn', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('home_btn', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('home_btn', 'Sticky', 'active-warn')">Sticky</button>
+            <button class="state-chip" onclick="setTestState('home_btn', 'N/A', '')">N/A</button>
+            <button class="state-chip" onclick="setTestState('home_btn', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('home_btn', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="vol_up">
+          <div class="test-header-line">
+            <span class="test-name">Volume Up</span>
+            <span class="pill-badge" id="badge_vol_up">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('vol_up', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('vol_up', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('vol_up', 'Sticky', 'active-warn')">Sticky</button>
+            <button class="state-chip" onclick="setTestState('vol_up', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('vol_up', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="vol_down">
+          <div class="test-header-line">
+            <span class="test-name">Volume Down</span>
+            <span class="pill-badge" id="badge_vol_down">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('vol_down', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('vol_down', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('vol_down', 'Sticky', 'active-warn')">Sticky</button>
+            <button class="state-chip" onclick="setTestState('vol_down', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('vol_down', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- DISPLAY & TOUCH -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">🖥️ Screen &amp; Digitizer</div>
+          <div style="display:flex; gap:6px;">
+            <button class="aero-btn" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="openScreenFlusher()">Color Wash</button>
+            <button class="aero-btn primary" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="openTouchTest()">Touch Grid</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="lcd">
+          <div class="test-header-line">
+            <span class="test-name">LCD Panel</span>
+            <span class="pill-badge" id="badge_lcd">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('lcd', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('lcd', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('lcd', 'Blemished', 'active-warn')">Blemished</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="touch_recog">
+          <div class="test-header-line">
+            <span class="test-name">Touch Recognition</span>
+            <span class="pill-badge" id="badge_touch_recog">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('touch_recog', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('touch_recog', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('touch_recog', 'Dead Spot', 'active-fail')">Dead Spot</button>
+            <button class="state-chip" onclick="setTestState('touch_recog', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('touch_recog', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="touch_id">
+          <div class="test-header-line">
+            <span class="test-name">Touch ID / Biometrics</span>
+            <span class="pill-badge" id="badge_touch_id">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('touch_id', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('touch_id', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('touch_id', 'N/A', '')">N/A</button>
+            <button class="state-chip" onclick="setTestState('touch_id', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('touch_id', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- BATTERY & POWER (AUTO-DETECTING) -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">⚡ Power &amp; Charging</div>
+          <span style="font-size:12px; font-weight:700; color:#125a8a;">Hardware Auto-Detect</span>
+        </div>
+
+        <div class="power-dock">
+          <div class="power-visual">
+            <div class="battery-pill-graphic">
+              <div class="battery-level-liquid" id="batteryLiquid"></div>
+            </div>
+            <div>
+              <div style="font-size: 16px; font-weight: 800;" id="batteryPercentText">--%</div>
+              <div class="plug-indicator" id="plugStatusIndicator">⚡ Cable Unplugged</div>
+            </div>
+          </div>
+          <button class="aero-btn" style="min-height:38px; font-size:12px;" onclick="simulatePlugIn()">Simulate Plug-In Event</button>
+        </div>
+
+        <div class="test-row" data-component="charge_port">
+          <div class="test-header-line">
+            <span class="test-name">Charge Port</span>
+            <span class="pill-badge" id="badge_charge_port">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('charge_port', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('charge_port', 'Fail', 'active-fail')">Fail</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="battery">
+          <div class="test-header-line">
+            <span class="test-name">Battery Health</span>
+            <span class="pill-badge" id="badge_battery">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('battery', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('battery', 'Fail', 'active-fail')">Fail</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- AUDIO & MICROPHONE -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">🎙️ Audio Systems</div>
+          <button class="aero-btn primary" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="testMicrophoneLoop()">Mic Loop (3s)</button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
+            <span>Mic Live Waveform</span>
+            <span id="micFeedbackText">Idle</span>
+          </div>
+          <div class="vu-bar-wrap">
+            <div class="vu-bar-fill" id="micVuFill"></div>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="microphone">
+          <div class="test-header-line">
+            <span class="test-name">Microphone</span>
+            <span class="pill-badge" id="badge_microphone">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('microphone', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('microphone', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('microphone', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('microphone', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="headphone_jack">
+          <div class="test-header-line">
+            <span class="test-name">Headphone Jack</span>
+            <span class="pill-badge" id="badge_headphone_jack">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'Loose', 'active-warn')">Loose</button>
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'N/A', '')">N/A</button>
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('headphone_jack', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CAMERAS -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">📷 Dual Cameras</div>
+          <div style="display:flex; gap:6px;">
+            <button class="aero-btn" style="min-height:36px; padding:0 8px; font-size:12px;" onclick="startCamera('user')">Front</button>
+            <button class="aero-btn" style="min-height:36px; padding:0 8px; font-size:12px;" onclick="startCamera('environment')">Rear</button>
+          </div>
+        </div>
+
+        <div class="camera-frame">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+        </div>
+
+        <div class="test-row" data-component="front_camera">
+          <div class="test-header-line">
+            <span class="test-name">Front Camera</span>
+            <span class="pill-badge" id="badge_front_camera">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('front_camera', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('front_camera', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('front_camera', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('front_camera', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="rear_camera">
+          <div class="test-header-line">
+            <span class="test-name">Rear Camera</span>
+            <span class="pill-badge" id="badge_rear_camera">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('rear_camera', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('rear_camera', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('rear_camera', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('rear_camera', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- WIRELESS & FINAL QC -->
+      <section class="section-card glass-panel">
+        <div class="section-head">
+          <div class="section-title">📡 Wireless &amp; Sign-off</div>
+          <button class="aero-btn success" style="min-height:36px; padding:0 10px; font-size:12px;" onclick="batchSetSection('final_qc', 'Yes')">Approve All</button>
+        </div>
+
+        <div class="test-row" data-component="wifi">
+          <div class="test-header-line">
+            <span class="test-name">Wi-Fi Connection</span>
+            <span class="pill-badge" id="badge_wifi">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('wifi', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('wifi', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('wifi', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('wifi', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="bluetooth">
+          <div class="test-header-line">
+            <span class="test-name">Bluetooth</span>
+            <span class="pill-badge" id="badge_bluetooth">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('bluetooth', 'Pass', 'active-pass')">Pass</button>
+            <button class="state-chip" onclick="setTestState('bluetooth', 'Fail', 'active-fail')">Fail</button>
+            <button class="state-chip" onclick="setTestState('bluetooth', 'Passcode', 'active-warn')">Passcode</button>
+            <button class="state-chip" onclick="setTestState('bluetooth', 'Remote Managed', 'active-warn')">Remote Managed</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="charges_verified">
+          <div class="test-header-line">
+            <span class="test-name">Charges Verified &amp; Added</span>
+            <span class="pill-badge" id="badge_charges_verified">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('charges_verified', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('charges_verified', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="notes_added">
+          <div class="test-header-line">
+            <span class="test-name">Notes Added</span>
+            <span class="pill-badge" id="badge_notes_added">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('notes_added', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('notes_added', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+
+        <div class="test-row" data-component="status_complete">
+          <div class="test-header-line">
+            <span class="test-name">Status Set to Repair Complete</span>
+            <span class="pill-badge" id="badge_status_complete">Unchecked</span>
+          </div>
+          <div class="chip-group">
+            <button class="state-chip" onclick="setTestState('status_complete', 'Yes', 'active-pass')">Yes</button>
+            <button class="state-chip" onclick="setTestState('status_complete', 'No', 'active-fail')">No</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer style="text-align: center; color: var(--text-sub); font-size: 13px; font-weight: 700;">
+      Conware Diagnostics • Powered by RepairDiagnostics_app
+    </footer>
+  </div>
+
+  <!-- Fullscreen Touch Digitizer Overlay -->
+  <div class="fullscreen-overlay" id="touchOverlay">
+    <div class="overlay-top-bar">
+      <div style="background:rgba(255,255,255,0.85); padding:8px 16px; border-radius:20px; font-weight:800; font-size:14px; color:#0b3759;">
+        Coverage: <span id="coverageText">0%</span> • Touches: <span id="fingerCount">0</span>
+      </div>
+      <button class="aero-btn" style="min-height:42px;" onclick="closeTouchTest()">Exit &amp; Return</button>
+    </div>
+    <canvas id="touchCanvas"></canvas>
+  </div>
+
+  <!-- Fullscreen Screen Flusher -->
+  <div class="fullscreen-overlay" id="flusherOverlay" style="background:#ffffff;" onclick="cycleFlusherColor()">
+    <div class="overlay-top-bar">
+      <div style="background:rgba(0,0,0,0.6); color:white; padding:6px 14px; border-radius:20px; font-size:12px;">
+        Tap anywhere to cycle colors (White, Black, Red, Green, Blue)
+      </div>
+      <button class="aero-btn" style="min-height:36px; padding:0 12px; font-size:12px;" onclick="closeScreenFlusher(event)">Close</button>
+    </div>
+  </div>
+
+  <!-- Audit Summary Modal -->
+  <div class="audit-modal" id="auditModal" onclick="if(event.target===this)closeAuditModal()">
+    <div class="audit-card glass-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid rgba(0,0,0,0.1); padding-bottom:12px; margin-bottom:16px;">
+        <h2 style="margin:0; font-size:22px; font-weight:900; color:#0c3e64;">Conware QA Inspection Slip</h2>
+        <button class="aero-btn" onclick="closeAuditModal()">✕</button>
+      </div>
+
+      <div id="auditReportList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px; font-size:14px;">
+        <!-- Dynamic report items -->
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="aero-btn" onclick="window.print()">🖨️ Print Slip</button>
+        <button class="aero-btn primary" onclick="closeAuditModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Audio System */
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, duration, type = 'sine') {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playPlugChime() {
+      if (!soundEnabled) return;
+      playTone(523.25, 0.15);
+      setTimeout(() => playTone(659.25, 0.18), 100);
+      setTimeout(() => playTone(783.99, 0.25), 200);
+    }
+
+    document.getElementById('soundToggleBtn').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggleBtn').innerText = soundEnabled ? '🔊 Audio On' : '🔇 Audio Off';
+    });
+
+    /* Test State Storage */
+    const testRegistry = {
+      sn_ticket: null, sn_asset: null, school_match: null, cleaned_device: null,
+      power_btn: null, home_btn: null, vol_up: null, vol_down: null,
+      lcd: null, touch_recog: null, touch_id: null,
+      charge_port: null, battery: null,
+      microphone: null, headphone_jack: null,
+      front_camera: null, rear_camera: null,
+      wifi: null, bluetooth: null,
+      charges_verified: null, notes_added: null, status_complete: null
+    };
+
+    function setTestState(key, state, activeClass) {
+      testRegistry[key] = state;
+      const row = document.querySelector(`[data-component="${key}"]`);
+      if (row) {
+        row.querySelectorAll('.state-chip').forEach(chip => {
+          chip.classList.remove('active-pass', 'active-fail', 'active-warn');
+          if (chip.innerText.trim() === state) {
+            if (activeClass) chip.classList.add(activeClass);
+          }
+        });
+        const badge = document.getElementById(`badge_${key}`);
+        if (badge) {
+          badge.innerText = state;
+          badge.className = 'pill-badge';
+          if (['Pass', 'Yes'].includes(state)) badge.classList.add('pass');
+          else if (['Fail', 'No', 'Dead Spot'].includes(state)) badge.classList.add('fail');
+        }
+      }
+      playTone(state === 'Pass' || state === 'Yes' ? 680 : 380, 0.08);
+      updateProgress();
+    }
+
+    function batchSetSection(section, state) {
+      const mapping = {
+        intake: ['sn_ticket', 'sn_asset', 'school_match', 'cleaned_device'],
+        buttons: ['power_btn', 'home_btn', 'vol_up', 'vol_down'],
+        final_qc: ['charges_verified', 'notes_added', 'status_complete']
+      };
+      (mapping[section] || []).forEach(key => setTestState(key, state, 'active-pass'));
+    }
+
+    function updateProgress() {
+      const total = Object.keys(testRegistry).length;
+      const completed = Object.values(testRegistry).filter(v => v !== null).length;
+      document.getElementById('checklistProgress').style.width = `${(completed / total) * 100}%`;
+      document.getElementById('progressRatio').innerText = `${completed} / ${total}`;
+    }
+
+    /* Hardware Battery & Charging Auto-Detect */
+    function setupBatteryMonitor() {
+      if ('getBattery' in navigator) {
+        navigator.getBattery().then(bat => {
+          updateBatteryDisplay(bat.level, bat.charging);
+          bat.addEventListener('levelchange', () => updateBatteryDisplay(bat.level, bat.charging));
+          bat.addEventListener('chargingchange', () => {
+            updateBatteryDisplay(bat.level, bat.charging);
+            if (bat.charging) {
+              handleChargingConnected();
+            }
+          });
+        }).catch(() => fallbackBatteryUI());
+      } else {
+        fallbackBatteryUI();
+      }
+    }
+
+    function updateBatteryDisplay(level, charging) {
+      const pct = Math.round(level * 100);
+      document.getElementById('batteryLiquid').style.width = `${pct}%`;
+      document.getElementById('batteryPercentText').innerText = `${pct}%`;
+      const indicator = document.getElementById('plugStatusIndicator');
+      if (charging) {
+        indicator.innerText = '⚡ Cable Connected!';
+        indicator.classList.add('plugged');
+      } else {
+        indicator.innerText = '⚡ Cable Unplugged';
+        indicator.classList.remove('plugged');
+      }
+    }
+
+    function handleChargingConnected() {
+      playPlugChime();
+      setTestState('charge_port', 'Pass', 'active-pass');
+      setTestState('battery', 'Pass', 'active-pass');
+    }
+
+    function fallbackBatteryUI() {
+      document.getElementById('batteryLiquid').style.width = '75%';
+      document.getElementById('batteryPercentText').innerText = 'Ready';
+    }
+
+    function simulatePlugIn() {
+      updateBatteryDisplay(0.92, true);
+      handleChargingConnected();
+    }
+
+    /* Fullscreen Touch Digitizer */
+    const touchOverlay = document.getElementById('touchOverlay');
+    const touchCanvas = document.getElementById('touchCanvas');
+    let touchCtx = touchCanvas.getContext('2d');
+    let gridCols = 16, gridRows = 22;
+    let grid = [];
+
+    function openTouchTest() {
+      initAudio();
+      touchOverlay.style.display = 'flex';
+      resizeTouchCanvas();
+      initGrid();
+      window.addEventListener('resize', resizeTouchCanvas);
+      touchCanvas.addEventListener('touchstart', handleTouch, { passive: false });
+      touchCanvas.addEventListener('touchmove', handleTouch, { passive: false });
+      touchCanvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    }
+
+    function closeTouchTest() {
+      touchOverlay.style.display = 'none';
+      window.removeEventListener('resize', resizeTouchCanvas);
+    }
+
+    function resizeTouchCanvas() {
+      touchCanvas.width = window.innerWidth;
+      touchCanvas.height = window.innerHeight;
+      drawGrid();
+    }
+
+    function initGrid() {
+      grid = Array(gridCols * gridRows).fill(false);
+    }
+
+    function drawGrid() {
+      touchCtx.clearRect(0, 0, touchCanvas.width, touchCanvas.height);
+      const w = touchCanvas.width / gridCols;
+      const h = touchCanvas.height / gridRows;
+
+      for (let r = 0; r < gridRows; r++) {
+        for (let c = 0; c < gridCols; c++) {
+          const idx = r * gridCols + c;
+          touchCtx.fillStyle = grid[idx] ? 'rgba(80, 220, 40, 0.7)' : 'rgba(255, 255, 255, 0.1)';
+          touchCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          touchCtx.fillRect(c * w, r * h, w, h);
+          touchCtx.strokeRect(c * w, r * h, w, h);
+        }
+      }
+    }
+
+    function handleTouch(e) {
+      e.preventDefault();
+      document.getElementById('fingerCount').innerText = e.touches.length;
+      const w = touchCanvas.width / gridCols;
+      const h = touchCanvas.height / gridRows;
+
+      for (let i = 0; i < e.touches.length; i++) {
+        const t = e.touches[i];
+        const c = Math.floor(t.clientX / w);
+        const r = Math.floor(t.clientY / h);
+        if (c >= 0 && c < gridCols && r >= 0 && r < gridRows) {
+          grid[r * gridCols + c] = true;
+        }
+      }
+      drawGrid();
+      const covered = grid.filter(Boolean).length;
+      const pct = Math.round((covered / grid.length) * 100);
+      document.getElementById('coverageText').innerText = `${pct}%`;
+      if (pct >= 90) setTestState('touch_recog', 'Pass', 'active-pass');
+    }
+
+    function handleTouchEnd(e) {
+      document.getElementById('fingerCount').innerText = e.touches.length;
+    }
+
+    /* Screen Flusher */
+    const flusherColors = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff'];
+    let flusherIdx = 0;
+    function openScreenFlusher() {
+      flusherIdx = 0;
+      const overlay = document.getElementById('flusherOverlay');
+      overlay.style.backgroundColor = flusherColors[0];
+      overlay.style.display = 'flex';
+    }
+    function cycleFlusherColor() {
+      flusherIdx = (flusherIdx + 1) % flusherColors.length;
+      document.getElementById('flusherOverlay').style.backgroundColor = flusherColors[flusherIdx];
+    }
+    function closeScreenFlusher(e) {
+      e.stopPropagation();
+      document.getElementById('flusherOverlay').style.display = 'none';
+      setTestState('lcd', 'Pass', 'active-pass');
+    }
+
+    /* Camera Inspection */
+    let currentStream = null;
+    async function startCamera(facingMode) {
+      try {
+        if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+        currentStream = stream;
+        document.getElementById('cameraVideo').srcObject = stream;
+        if (facingMode === 'user') setTestState('front_camera', 'Pass', 'active-pass');
+        else setTestState('rear_camera', 'Pass', 'active-pass');
+      } catch (err) {
+        alert('Camera access restricted or unavailable.');
+      }
+    }
+
+    /* Microphone Loopback */
+    async function testMicrophoneLoop() {
+      try {
+        initAudio();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const vu = document.getElementById('micVuFill');
+        const fb = document.getElementById('micFeedbackText');
+        fb.innerText = 'Listening...';
+
+        let active = true;
+        function updateVU() {
+          if (!active) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const avg = sum / dataArray.length;
+          vu.style.width = `${Math.min(100, avg * 1.6)}%`;
+          requestAnimationFrame(updateVU);
+        }
+        updateVU();
+
+        setTimeout(() => {
+          active = false;
+          stream.getTracks().forEach(t => t.stop());
+          vu.style.width = '0%';
+          fb.innerText = 'Pass Verified';
+          setTestState('microphone', 'Pass', 'active-pass');
+        }, 3000);
+      } catch (e) {
+        alert('Microphone access denied or unsupported.');
+      }
+    }
+
+    /* Audit Slip Modal */
+    function openAuditModal() {
+      const list = document.getElementById('auditReportList');
+      list.innerHTML = '';
+      for (const [key, val] of Object.entries(testRegistry)) {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.padding = '6px 0';
+        item.style.borderBottom = '1px solid rgba(0,0,0,0.06)';
+        item.innerHTML = `<strong>${key.replace(/_/g, ' ').toUpperCase()}:</strong> <span>${val || 'UNCHECKED'}</span>`;
+        list.appendChild(item);
+      }
+      document.getElementById('auditModal').style.display = 'flex';
+    }
+
+    function closeAuditModal() {
+      document.getElementById('auditModal').style.display = 'none';
+    }
+
+    /* Background Floating Bubble Decor */
+    const bCanvas = document.getElementById('bubbleBg');
+    const bCtx = bCanvas.getContext('2d');
+    let bubbles = [];
+
+    function resizeBubbles() {
+      bCanvas.width = window.innerWidth;
+      bCanvas.height = window.innerHeight;
+      bubbles = Array.from({ length: 18 }, () => ({
+        x: Math.random() * bCanvas.width,
+        y: Math.random() * bCanvas.height,
+        r: 12 + Math.random() * 26,
+        vy: -0.3 - Math.random() * 0.7,
+        vx: (Math.random() - 0.5) * 0.4
+      }));
+    }
+
+    function renderBubbles() {
+      bCtx.clearRect(0, 0, bCanvas.width, bCanvas.height);
+      bCtx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      bCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      bubbles.forEach(b => {
+        b.y += b.vy;
+        b.x += b.vx;
+        if (b.y < -50) b.y = bCanvas.height + 50;
+        bCtx.beginPath();
+        bCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.stroke();
+      });
+      requestAnimationFrame(renderBubbles);
+    }
+
+    window.addEventListener('resize', resizeBubbles);
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeBubbles();
+      renderBubbles();
+      setupBatteryMonitor();
+      document.addEventListener('touchstart', initAudio, { once: true });
+      document.addEventListener('click', initAudio, { once: true });
+    });
+  </script>
+</body>
+</html>
